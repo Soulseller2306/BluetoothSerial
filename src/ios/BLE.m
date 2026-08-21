@@ -220,7 +220,7 @@ CBUUID *writeCharacteristicUUID;
     hc02AdvUUID = [CBUUID UUIDWithString:@HC02_ADV_UUID];
     NSArray *services = @[redBearLabsServiceUUID, adafruitServiceUUID, lairdServiceUUID, blueGigaServiceUUID, hm10ServiceUUID, 
                         hc02AdvUUID];
-    [self.CM scanForPeripheralsWithServices:services options: nil];
+    [self.CM scanForPeripheralsWithServices:nil options: nil];
 #else
     [self.CM scanForPeripheralsWithServices:nil options:nil]; // Start scanning
 #endif
