@@ -210,17 +210,24 @@ CBUUID *writeCharacteristicUUID;
 
     [NSTimer scheduledTimerWithTimeInterval:(float)timeout target:self selector:@selector(scanTimer:) userInfo:nil repeats:NO];
 
+// #if TARGET_OS_IPHONE
+//     redBearLabsServiceUUID = [CBUUID UUIDWithString:@RBL_SERVICE_UUID];
+//     adafruitServiceUUID = [CBUUID UUIDWithString:@ADAFRUIT_SERVICE_UUID];
+//     lairdServiceUUID = [CBUUID UUIDWithString:@LAIRD_SERVICE_UUID];
+//     blueGigaServiceUUID = [CBUUID UUIDWithString:@BLUEGIGA_SERVICE_UUID];
+//     hm10ServiceUUID = [CBUUID UUIDWithString:@HM10_SERVICE_UUID];
+//     hc02ServiceUUID = [CBUUID UUIDWithString:@HC02_SERVICE_UUID];
+//     hc02AdvUUID = [CBUUID UUIDWithString:@HC02_ADV_UUID];
+//     NSArray *services = @[redBearLabsServiceUUID, adafruitServiceUUID, lairdServiceUUID, blueGigaServiceUUID, hm10ServiceUUID, 
+//                         hc02AdvUUID];
+//     [self.CM scanForPeripheralsWithServices:nil options: nil];
 #if TARGET_OS_IPHONE
-    redBearLabsServiceUUID = [CBUUID UUIDWithString:@RBL_SERVICE_UUID];
-    adafruitServiceUUID = [CBUUID UUIDWithString:@ADAFRUIT_SERVICE_UUID];
-    lairdServiceUUID = [CBUUID UUIDWithString:@LAIRD_SERVICE_UUID];
-    blueGigaServiceUUID = [CBUUID UUIDWithString:@BLUEGIGA_SERVICE_UUID];
-    hm10ServiceUUID = [CBUUID UUIDWithString:@HM10_SERVICE_UUID];
-    hc02ServiceUUID = [CBUUID UUIDWithString:@HC02_SERVICE_UUID];
-    hc02AdvUUID = [CBUUID UUIDWithString:@HC02_ADV_UUID];
-    NSArray *services = @[redBearLabsServiceUUID, adafruitServiceUUID, lairdServiceUUID, blueGigaServiceUUID, hm10ServiceUUID, 
-                        hc02AdvUUID];
-    [self.CM scanForPeripheralsWithServices:nil options: nil];
+
+    NSLog(@"Starting generic BLE scan");
+
+    [self.CM scanForPeripheralsWithServices:nil
+                                    options:nil];
+
 #else
     [self.CM scanForPeripheralsWithServices:nil options:nil]; // Start scanning
 #endif
@@ -442,11 +449,16 @@ CBUUID *writeCharacteristicUUID;
 
 - (void)centralManagerDidUpdateState:(CBCentralManager *)central
 {
-#if TARGET_OS_IPHONE
-    NSLog(@"Status of CoreBluetooth central manager changed %ld (%s)", (long)central.state, [self centralManagerStateToString:central.state]);
-#else
-    [self isLECapableHardware];
-#endif
+    // #if TARGET_OS_IPHONE
+    //     NSLog(@"Status of CoreBluetooth central manager changed %ld (%s)", (long)central.state, [self centralManagerStateToString:central.state]);
+    // #else
+    //     [self isLECapableHardware];
+    // #endif
+    NSLog(@"========== Bluetooth State ==========");
+    NSLog(@"CoreBluetooth state = %ld", (long)central.state);
+    NSLog(@"CoreBluetooth state = %s",
+          [self centralManagerStateToString:central.state]);
+    NSLog(@"=====================================");
 }
 
 - (void)centralManager:(CBCentralManager *)central didDiscoverPeripheral:(CBPeripheral *)peripheral advertisementData:(NSDictionary *)advertisementData RSSI:(NSNumber *)RSSI
