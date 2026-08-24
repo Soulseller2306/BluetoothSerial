@@ -147,7 +147,7 @@
 - (void)isEnabled:(CDVInvokedUrlCommand*)command {
 
     // short delay so CBCentralManger can spin up bluetooth
-    [NSTimer scheduledTimerWithTimeInterval:(float)1.0
+    [NSTimer scheduledTimerWithTimeInterval:(float)0.2
                                      target:self
                                    selector:@selector(bluetoothStateTimer:)
                                    userInfo:[command.callbackId copy]
@@ -285,17 +285,50 @@
 }
 
 -(void)connectFirstDeviceTimer:(NSTimer *)timer {
+    // commented out by shah
+    // if(_bleShield.peripherals.count > 0) {
+    //     NSLog(@"Connecting");
+    //     [_bleShield connectPeripheral:[_bleShield.peripherals objectAtIndex:0]];
+    // } else {
+    //     NSString *error = @"Did not find any BLE peripherals";
+    //     NSLog(@"%@", error);
+    //     CDVPluginResult *pluginResult;
+    //     pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:error];
+    //     [self.commandDelegate sendPluginResult:pluginResult callbackId:_connectCallbackId];
+    // }
+    
+    NSLog(@"Peripheral count: %lu",
+          (unsigned long)_bleShield.peripherals.count);
 
-    if(_bleShield.peripherals.count > 0) {
-        NSLog(@"Connecting");
-        [_bleShield connectPeripheral:[_bleShield.peripherals objectAtIndex:0]];
-    } else {
-        NSString *error = @"Did not find any BLE peripherals";
-        NSLog(@"%@", error);
-        CDVPluginResult *pluginResult;
-        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:error];
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:_connectCallbackId];
+    for (CBPeripheral *peripheral in _bleShield.peripherals) {
+
+        NSLog(@"Found peripheral: %@ / %@",
+              peripheral.name,
+              peripheral.identifier.UUIDString);
+
+        if ([peripheral.name isEqualToString:@"9printer-80B"]) {
+
+            NSLog(@"Found 9printer-80B");
+
+            [_bleShield connectPeripheral:peripheral];
+
+            return;
+        }
     }
+
+    NSString *error =
+        [NSString stringWithFormat:
+            @"9printer-80B not found. Discovered=%lu",
+            (unsigned long)_bleShield.peripherals.count];
+
+    CDVPluginResult *pluginResult =
+        [CDVPluginResult resultWithStatus:
+            CDVCommandStatus_ERROR
+            messageAsString:error];
+
+    [self.commandDelegate
+        sendPluginResult:pluginResult
+        callbackId:_connectCallbackId];
 }
 
 -(void)connectUuidTimer:(NSTimer *)timer {
@@ -307,7 +340,10 @@
     if (peripheral) {
         [_bleShield connectPeripheral:peripheral];
     } else {
-        NSString *error = [NSString stringWithFormat:@"Could not find peripheral %@.", uuid];
+        NSString *error =
+            [NSString stringWithFormat:
+                @"Did not find any BLE peripherals. Count=%ld",
+                (long)_bleShield.peripherals.count];
         NSLog(@"%@", error);
         CDVPluginResult *pluginResult;
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:error];
@@ -422,7 +458,7 @@
 
     [self scanForBLEPeripherals:5];
 
-    [NSTimer scheduledTimerWithTimeInterval:(float)5.0
+    [NSTimer scheduledTimerWithTimeInterval:(float)3.0
                                      target:self
                                    selector:@selector(connectFirstDeviceTimer:)
                                    userInfo:nil
