@@ -39,12 +39,6 @@ CBUUID *serialServiceUUID;
 CBUUID *readCharacteristicUUID;
 CBUUID *writeCharacteristicUUID;
 
-static NSString * const PRINTER_SERVICE_UUID =
-    @"49535343-FE7D-4AE5-8FA9-9FAD205E455";
-
-static NSString * const PRINTER_WRITE_UUID =
-    @"49535343-8841-43F4-A8D4-ECBE34729BB3";
-
 -(void) readRSSI
 {
     [activePeripheral readRSSI];
@@ -165,84 +159,34 @@ static NSString * const PRINTER_WRITE_UUID =
 
 -(void) writeValue:(CBUUID *)serviceUUID characteristicUUID:(CBUUID *)characteristicUUID p:(CBPeripheral *)p data:(NSData *)data
 {
-    // commented out by shah
-    // CBService *service = [self findServiceFromUUID:serviceUUID p:p];
-
-    // if (!service)
-    // {
-    //     NSLog(@"Could not find service with UUID %@ on peripheral with UUID %@",
-    //           [self CBUUIDToString:serviceUUID],
-    //           p.identifier.UUIDString);
-
-    //     return;
-    // }
-
-    // CBCharacteristic *characteristic = [self findCharacteristicFromUUID:characteristicUUID service:service];
-
-    // if (!characteristic)
-    // {
-    //     NSLog(@"Could not find characteristic with UUID %@ on service with UUID %@ on peripheral with UUID %@",
-    //           [self CBUUIDToString:characteristicUUID],
-    //           [self CBUUIDToString:serviceUUID],
-    //           p.identifier.UUIDString);
-
-    //     return;
-    // }
-
-    // if ((characteristic.properties & CBCharacteristicPropertyWrite) == CBCharacteristicPropertyWrite) {
-    //     [p writeValue:data forCharacteristic:characteristic type:CBCharacteristicWriteWithResponse];
-    // }
-    // else if ((characteristic.properties & CBCharacteristicPropertyWriteWithoutResponse) == CBCharacteristicPropertyWriteWithoutResponse) {
-    //     [p writeValue:data forCharacteristic:characteristic type:CBCharacteristicWriteWithoutResponse];
-    // }
-
-     CBService *service =
-        [self findServiceFromUUID:serviceUUID p:p];
+    CBService *service = [self findServiceFromUUID:serviceUUID p:p];
 
     if (!service)
     {
-        NSLog(@"Could not find service %@", serviceUUID);
+        NSLog(@"Could not find service with UUID %@ on peripheral with UUID %@",
+              [self CBUUIDToString:serviceUUID],
+              p.identifier.UUIDString);
+
         return;
     }
 
-    CBCharacteristic *characteristic =
-        [self findCharacteristicFromUUID:characteristicUUID
-                                 service:service];
+    CBCharacteristic *characteristic = [self findCharacteristicFromUUID:characteristicUUID service:service];
 
     if (!characteristic)
     {
-        NSLog(@"Could not find characteristic %@",
-              characteristicUUID);
+        NSLog(@"Could not find characteristic with UUID %@ on service with UUID %@ on peripheral with UUID %@",
+              [self CBUUIDToString:characteristicUUID],
+              [self CBUUIDToString:serviceUUID],
+              p.identifier.UUIDString);
+
         return;
     }
 
-    NSLog(@"Writing %lu bytes to %@",
-          (unsigned long)data.length,
-          characteristic.UUID);
-
-    if ((characteristic.properties &
-         CBCharacteristicPropertyWriteWithoutResponse)
-        == CBCharacteristicPropertyWriteWithoutResponse)
-    {
-        NSLog(@"Using WRITE WITHOUT RESPONSE");
-
-        [p writeValue:data
-    forCharacteristic:characteristic
-                 type:CBCharacteristicWriteWithoutResponse];
+    if ((characteristic.properties & CBCharacteristicPropertyWrite) == CBCharacteristicPropertyWrite) {
+        [p writeValue:data forCharacteristic:characteristic type:CBCharacteristicWriteWithResponse];
     }
-    else if ((characteristic.properties &
-              CBCharacteristicPropertyWrite)
-             == CBCharacteristicPropertyWrite)
-    {
-        NSLog(@"Using WRITE WITH RESPONSE");
-
-        [p writeValue:data
-    forCharacteristic:characteristic
-                 type:CBCharacteristicWriteWithResponse];
-    }
-    else
-    {
-        NSLog(@"Characteristic does not support writing");
+    else if ((characteristic.properties & CBCharacteristicPropertyWriteWithoutResponse) == CBCharacteristicPropertyWriteWithoutResponse) {
+        [p writeValue:data forCharacteristic:characteristic type:CBCharacteristicWriteWithoutResponse];
     }
 }
 
@@ -253,20 +197,36 @@ static NSString * const PRINTER_WRITE_UUID =
     return temp;
 }
 
-- (void) controlSetup
+- (void)controlSetup
 {
-    // commented out by shah
-    // self.CM = [[CBCentralManager alloc] initWithDelegate:self queue:nil];
     self.CM = [[CBCentralManager alloc] initWithDelegate:self queue:nil];
 
-    serialServiceUUID =
-        [CBUUID UUIDWithString:PRINTER_SERVICE_UUID];
+    redBearLabsServiceUUID =
+        [CBUUID UUIDWithString:@RBL_SERVICE_UUID];
 
-    writeCharacteristicUUID =
-        [CBUUID UUIDWithString:PRINTER_WRITE_UUID];
+    adafruitServiceUUID =
+        [CBUUID UUIDWithString:@ADAFRUIT_SERVICE_UUID];
 
-    NSLog(@"Printer service UUID: %@", serialServiceUUID);
-    NSLog(@"Printer write UUID: %@", writeCharacteristicUUID);
+    lairdServiceUUID =
+        [CBUUID UUIDWithString:@LAIRD_SERVICE_UUID];
+
+    blueGigaServiceUUID =
+        [CBUUID UUIDWithString:@BLUEGIGA_SERVICE_UUID];
+
+    hm10ServiceUUID =
+        [CBUUID UUIDWithString:@HM10_SERVICE_UUID];
+
+    hc02ServiceUUID =
+        [CBUUID UUIDWithString:@HC02_SERVICE_UUID];
+
+    hc02AdvUUID =
+        [CBUUID UUIDWithString:@HC02_ADV_UUID];
+
+    NSLog(@"===== BLE UUID SETUP =====");
+    NSLog(@"HC02 Service: %@", hc02ServiceUUID);
+    NSLog(@"HC02 TX: %@", [CBUUID UUIDWithString:@HC02_CHAR_TX_UUID]);
+    NSLog(@"HC02 RX: %@", [CBUUID UUIDWithString:@HC02_CHAR_RX_UUID]);
+    NSLog(@"==========================");
 }
 
 - (int) findBLEPeripherals:(int) timeout
@@ -280,28 +240,35 @@ static NSString * const PRINTER_WRITE_UUID =
 
     [NSTimer scheduledTimerWithTimeInterval:(float)timeout target:self selector:@selector(scanTimer:) userInfo:nil repeats:NO];
 
-// commented by shah
-// #if TARGET_OS_IPHONE
-//     redBearLabsServiceUUID = [CBUUID UUIDWithString:@RBL_SERVICE_UUID];
-//     adafruitServiceUUID = [CBUUID UUIDWithString:@ADAFRUIT_SERVICE_UUID];
-//     lairdServiceUUID = [CBUUID UUIDWithString:@LAIRD_SERVICE_UUID];
-//     blueGigaServiceUUID = [CBUUID UUIDWithString:@BLUEGIGA_SERVICE_UUID];
-//     hm10ServiceUUID = [CBUUID UUIDWithString:@HM10_SERVICE_UUID];
-//     hc02ServiceUUID = [CBUUID UUIDWithString:@HC02_SERVICE_UUID];
-//     hc02AdvUUID = [CBUUID UUIDWithString:@HC02_ADV_UUID];
-//     NSArray *services = @[redBearLabsServiceUUID, adafruitServiceUUID, lairdServiceUUID, blueGigaServiceUUID, hm10ServiceUUID, 
-//                         hc02AdvUUID];
-//     [self.CM scanForPeripheralsWithServices:nil options: nil];
-#if TARGET_OS_IPHONE
+    #if TARGET_OS_IPHONE
+        redBearLabsServiceUUID = [CBUUID UUIDWithString:@RBL_SERVICE_UUID];
+        adafruitServiceUUID = [CBUUID UUIDWithString:@ADAFRUIT_SERVICE_UUID];
+        lairdServiceUUID = [CBUUID UUIDWithString:@LAIRD_SERVICE_UUID];
+        blueGigaServiceUUID = [CBUUID UUIDWithString:@BLUEGIGA_SERVICE_UUID];
+        hm10ServiceUUID = [CBUUID UUIDWithString:@HM10_SERVICE_UUID];
+        hc02ServiceUUID = [CBUUID UUIDWithString:@HC02_SERVICE_UUID];
+        hc02AdvUUID = [CBUUID UUIDWithString:@HC02_ADV_UUID];
+        NSArray *services = @[
+            redBearLabsServiceUUID, 
+            adafruitServiceUUID, 
+            lairdServiceUUID, 
+            blueGigaServiceUUID, 
+            hm10ServiceUUID, 
+            hc02ServiceUUID, 
+            hc02AdvUUID
+            ];
+        NSDictionary *options = @{
+            CBCentralManagerScanOptionAllowDuplicatesKey : @YES
+        };
 
-    NSLog(@"Starting generic BLE scan");
+        [self.CM scanForPeripheralsWithServices:nil options:options];
+    #else
+        NSDictionary *options = @{
+            CBCentral   ManagerScanOptionAllowDuplicatesKey : @YES
+        };
 
-    [self.CM scanForPeripheralsWithServices:nil
-                                    options:nil];
-
-#else
-    [self.CM scanForPeripheralsWithServices:nil options:nil]; // Start scanning
-#endif
+        [self.CM scanForPeripheralsWithServices:nil options:options]; // Start scanning
+    #endif
 
     NSLog(@"scanForPeripheralsWithServices");
 
@@ -319,12 +286,18 @@ static NSString * const PRINTER_WRITE_UUID =
 
 - (void) connectPeripheral:(CBPeripheral *)peripheral
 {
+    done = false;
+    
     NSLog(@"Connecting to peripheral with UUID : %@", peripheral.identifier.UUIDString);
 
     self.activePeripheral = peripheral;
     self.activePeripheral.delegate = self;
-    [self.CM connectPeripheral:self.activePeripheral
-                       options:[NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES] forKey:CBConnectPeripheralOptionNotifyOnDisconnectionKey]];
+    // [self.CM connectPeripheral:self.activePeripheral
+    //                    options:[NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES] forKey:CBConnectPeripheralOptionNotifyOnDisconnectionKey]];
+     [self.CM connectPeripheral:self.activePeripheral
+                       options:@{
+                           CBConnectPeripheralOptionNotifyOnDisconnectionKey : @YES
+                       }];
 }
 
 - (const char *) centralManagerStateToString: (int)state
@@ -520,16 +493,18 @@ static NSString * const PRINTER_WRITE_UUID =
 
 - (void)centralManagerDidUpdateState:(CBCentralManager *)central
 {
-    // #if TARGET_OS_IPHONE
-    //     NSLog(@"Status of CoreBluetooth central manager changed %ld (%s)", (long)central.state, [self centralManagerStateToString:central.state]);
-    // #else
-    //     [self isLECapableHardware];
-    // #endif
-    NSLog(@"========== Bluetooth State ==========");
-    NSLog(@"CoreBluetooth state = %ld", (long)central.state);
-    NSLog(@"CoreBluetooth state = %s",
+    #if TARGET_OS_IPHONE
+        NSLog(@"Status of CoreBluetooth central manager changed %ld (%s)", (long)central.state, [self centralManagerStateToString:central.state]);
+    #else
+        [self isLECapableHardware];
+    #endif
+    NSLog(@"========================================");
+    NSLog(@"CORE BLUETOOTH STATE CHANGED");
+    NSLog(@"State = %ld", (long)central.state);
+    NSLog(@"State = %s",
           [self centralManagerStateToString:central.state]);
-    NSLog(@"=====================================");
+    NSLog(@"========================================");
+
 }
 
 - (void)centralManager:(CBCentralManager *)central didDiscoverPeripheral:(CBPeripheral *)peripheral advertisementData:(NSDictionary *)advertisementData RSSI:(NSNumber *)RSSI
@@ -561,41 +536,38 @@ static NSString * const PRINTER_WRITE_UUID =
     // }
 
     // NSLog(@"didDiscoverPeripheral");
-     NSLog(@"====================================");
+    NSLog(@"========================================");
     NSLog(@"BLE PERIPHERAL DISCOVERED");
-    NSLog(@"Name: %@", peripheral.name);
-    NSLog(@"UUID: %@", peripheral.identifier.UUIDString);
-    NSLog(@"RSSI: %@", RSSI);
-    NSLog(@"Advertisement: %@", advertisementData);
-    NSLog(@"====================================");
+    NSLog(@"Name      : %@", peripheral.name);
+    NSLog(@"UUID      : %@", peripheral.identifier.UUIDString);
+    NSLog(@"RSSI      : %@", RSSI);
+    NSLog(@"Advertise : %@", advertisementData);
+    NSLog(@"========================================");
 
     if (!self.peripherals)
-    {
-        self.peripherals = [[NSMutableArray alloc]
-                            initWithObjects:peripheral, nil];
-    }
-    else
-    {
-        BOOL exists = NO;
+        self.peripherals = [[NSMutableArray alloc] init];
 
-        for (CBPeripheral *p in self.peripherals)
-        {
-            if ([p.identifier.UUIDString
-                 isEqualToString:peripheral.identifier.UUIDString])
-            {
-                exists = YES;
-                break;
-            }
-        }
+    BOOL alreadyExists = NO;
 
-        if (!exists)
+    for (CBPeripheral *p in self.peripherals)
+    {
+        if ([p.identifier isEqual:peripheral.identifier])
         {
-            [self.peripherals addObject:peripheral];
+            alreadyExists = YES;
+            break;
         }
     }
 
-    NSLog(@"Total discovered peripherals: %lu",
-          (unsigned long)self.peripherals.count);
+    if (!alreadyExists)
+    {
+        [peripheral bts_setAdvertisementData:advertisementData RSSI:RSSI];
+
+        [self.peripherals addObject:peripheral];
+
+        NSLog(@"Added peripheral to list");
+        NSLog(@"Total peripherals = %lu",
+              (unsigned long)self.peripherals.count);
+    }
 }
 
 - (void)centralManager:(CBCentralManager *)central didConnectPeripheral:(CBPeripheral *)peripheral
@@ -614,172 +586,93 @@ static bool done = false;
 
 - (void)peripheral:(CBPeripheral *)peripheral didDiscoverCharacteristicsForService:(CBService *)service error:(NSError *)error
 {
-    // commented out by shah
-    // if (!error)
-    // {
-    //     //        printf("Characteristics of service with UUID : %s found\n",[self CBUUIDToString:service.UUID]);
-
-    //     for (int i=0; i < service.characteristics.count; i++)
-    //     {
-    //         //            CBCharacteristic *c = [service.characteristics objectAtIndex:i];
-    //         //            printf("Found characteristic %s\n",[ self CBUUIDToString:c.UUID]);
-    //         CBService *s = [peripheral.services objectAtIndex:(peripheral.services.count - 1)];
-
-    //         if ([service.UUID isEqual:s.UUID])
-    //         {
-    //             if (!done)
-    //             {
-    //                 [self enableReadNotification:activePeripheral];
-    //                 [[self delegate] bleDidConnect];
-    //                 isConnected = true;
-    //                 done = true;
-    //             }
-
-    //             break;
-    //         }
-    //     }
-    // }
-    // else
-    // {
-    //     NSLog(@"Characteristic discorvery unsuccessful!");
-    // }
-
-    if (error)
+    if (!error)
     {
-        NSLog(@"Characteristic discovery failed: %@", error);
-        return;
-    }
+        //        printf("Characteristics of service with UUID : %s found\n",[self CBUUIDToString:service.UUID]);
 
-    NSLog(@"========== CHARACTERISTICS ==========");
-    NSLog(@"Service: %@", service.UUID);
-
-    for (CBCharacteristic *characteristic in service.characteristics)
-    {
-        NSLog(@"Characteristic: %@", characteristic.UUID);
-        NSLog(@"Properties: %lu",
-              (unsigned long)characteristic.properties);
-
-        if ([characteristic.UUID.UUIDString
-             caseInsensitiveCompare:PRINTER_WRITE_UUID] == NSOrderedSame)
+        for (int i=0; i < service.characteristics.count; i++)
         {
-            NSLog(@"*** 9Printer WRITE characteristic found ***");
+            //            CBCharacteristic *c = [service.characteristics objectAtIndex:i];
+            //            printf("Found characteristic %s\n",[ self CBUUIDToString:c.UUID]);
+            CBService *s = [peripheral.services objectAtIndex:(peripheral.services.count - 1)];
 
-            writeCharacteristicUUID = characteristic.UUID;
-
-            NSLog(@"Write characteristic UUID = %@",
-                  writeCharacteristicUUID);
-
-            NSLog(@"Write without response supported = %s",
-                  (characteristic.properties &
-                   CBCharacteristicPropertyWriteWithoutResponse)
-                  ? "YES" : "NO");
-
-            if ((characteristic.properties &
-                 CBCharacteristicPropertyWriteWithoutResponse)
-                == CBCharacteristicPropertyWriteWithoutResponse)
+            if ([service.UUID isEqual:s.UUID])
             {
-                NSLog(@"*** Printer is ready for WRITE WITHOUT RESPONSE ***");
-
                 if (!done)
                 {
+                    [self enableReadNotification:activePeripheral];
                     [[self delegate] bleDidConnect];
                     isConnected = true;
                     done = true;
                 }
-            }
 
-            return;
+                break;
+            }
         }
     }
-
-    NSLog(@"Write characteristic NOT found");
+    else
+    {
+        NSLog(@"Characteristic discorvery unsuccessful!");
+    }
 }
 
 - (void)peripheral:(CBPeripheral *)peripheral didDiscoverServices:(NSError *)error
 {
-    // commented out by shah
-    // if (!error)
-    // {
-    //     // Determine if we're connected to Red Bear Labs, Adafruit or Laird hardware
-    //     for (CBService *service in peripheral.services) {
-
-    //         if ([service.UUID isEqual:redBearLabsServiceUUID]) {
-    //             NSLog(@"RedBearLabs Bluetooth");
-    //             serialServiceUUID = redBearLabsServiceUUID;
-    //             readCharacteristicUUID = [CBUUID UUIDWithString:@RBL_CHAR_TX_UUID];
-    //             writeCharacteristicUUID = [CBUUID UUIDWithString:@RBL_CHAR_RX_UUID];
-    //             break;
-    //         } else if ([service.UUID isEqual:adafruitServiceUUID]) {
-    //             NSLog(@"Adafruit Bluefruit LE");
-    //             serialServiceUUID = adafruitServiceUUID;
-    //             readCharacteristicUUID = [CBUUID UUIDWithString:@ADAFRUIT_CHAR_TX_UUID];
-    //             writeCharacteristicUUID = [CBUUID UUIDWithString:@ADAFRUIT_CHAR_RX_UUID];
-    //             break;
-    //         } else if ([service.UUID isEqual:lairdServiceUUID]) {
-    //             NSLog(@"Laird BL600");
-    //             serialServiceUUID = lairdServiceUUID;
-    //             readCharacteristicUUID = [CBUUID UUIDWithString:@LAIRD_CHAR_TX_UUID];
-    //             writeCharacteristicUUID = [CBUUID UUIDWithString:@LAIRD_CHAR_RX_UUID];
-    //             break;
-    //         } else if ([service.UUID isEqual:blueGigaServiceUUID]) {
-    //             NSLog(@"BlueGiga Bluetooth");
-    //             serialServiceUUID = blueGigaServiceUUID;
-    //             readCharacteristicUUID = [CBUUID UUIDWithString:@BLUEGIGA_CHAR_TX_UUID];
-    //             writeCharacteristicUUID = [CBUUID UUIDWithString:@BLUEGIGA_CHAR_RX_UUID];
-    //             break;
-    //         } else if ([service.UUID isEqual:hm10ServiceUUID]) {
-    //             NSLog(@"HM-10 Bluetooth");
-    //             serialServiceUUID = hm10ServiceUUID;
-    //             readCharacteristicUUID = [CBUUID UUIDWithString:@HM10_CHAR_TX_UUID];
-    //             writeCharacteristicUUID = [CBUUID UUIDWithString:@HM10_CHAR_RX_UUID];
-    //             break;
-    //         } else if ([service.UUID isEqual:hc02ServiceUUID]) {
-    //             NSLog(@"HC-02 Bluetooth");
-    //             NSLog(@"Set HC-02 read write UUID");
-    //             serialServiceUUID = hc02ServiceUUID;
-    //             readCharacteristicUUID = [CBUUID UUIDWithString:@HC02_CHAR_TX_UUID];
-    //             writeCharacteristicUUID = [CBUUID UUIDWithString:@HC02_CHAR_RX_UUID];
-    //             break;
-    //         } else {
-    //             // ignore unknown services
-    //         }
-    //     }
-
-    //     // TODO - future versions should just get characteristics we care about
-    //     // [peripheral discoverCharacteristics:characteristics forService:service];
-    //     [self getAllCharacteristicsFromPeripheral:peripheral];
-    // }
-    // else
-    // {
-    //     NSLog(@"Service discovery was unsuccessful!");
-    // }
-    if (error)
+    if (!error)
     {
-        NSLog(@"Service discovery failed: %@", error);
-        return;
-    }
+        // Determine if we're connected to Red Bear Labs, Adafruit or Laird hardware
+        for (CBService *service in peripheral.services) {
 
-    NSLog(@"========== SERVICES ==========");
-
-    for (CBService *service in peripheral.services)
-    {
-        NSLog(@"Service found: %@", service.UUID);
-
-        if ([service.UUID.UUIDString
-             caseInsensitiveCompare:PRINTER_SERVICE_UUID] == NSOrderedSame)
-        {
-            NSLog(@"*** 9Printer service found ***");
-
-            serialServiceUUID = service.UUID;
-
-            [peripheral discoverCharacteristics:nil
-                                     forService:service];
-
-            return;
+            if ([service.UUID isEqual:redBearLabsServiceUUID]) {
+                NSLog(@"RedBearLabs Bluetooth");
+                serialServiceUUID = redBearLabsServiceUUID;
+                readCharacteristicUUID = [CBUUID UUIDWithString:@RBL_CHAR_TX_UUID];
+                writeCharacteristicUUID = [CBUUID UUIDWithString:@RBL_CHAR_RX_UUID];
+                break;
+            } else if ([service.UUID isEqual:adafruitServiceUUID]) {
+                NSLog(@"Adafruit Bluefruit LE");
+                serialServiceUUID = adafruitServiceUUID;
+                readCharacteristicUUID = [CBUUID UUIDWithString:@ADAFRUIT_CHAR_TX_UUID];
+                writeCharacteristicUUID = [CBUUID UUIDWithString:@ADAFRUIT_CHAR_RX_UUID];
+                break;
+            } else if ([service.UUID isEqual:lairdServiceUUID]) {
+                NSLog(@"Laird BL600");
+                serialServiceUUID = lairdServiceUUID;
+                readCharacteristicUUID = [CBUUID UUIDWithString:@LAIRD_CHAR_TX_UUID];
+                writeCharacteristicUUID = [CBUUID UUIDWithString:@LAIRD_CHAR_RX_UUID];
+                break;
+            } else if ([service.UUID isEqual:blueGigaServiceUUID]) {
+                NSLog(@"BlueGiga Bluetooth");
+                serialServiceUUID = blueGigaServiceUUID;
+                readCharacteristicUUID = [CBUUID UUIDWithString:@BLUEGIGA_CHAR_TX_UUID];
+                writeCharacteristicUUID = [CBUUID UUIDWithString:@BLUEGIGA_CHAR_RX_UUID];
+                break;
+            } else if ([service.UUID isEqual:hm10ServiceUUID]) {
+                NSLog(@"HM-10 Bluetooth");
+                serialServiceUUID = hm10ServiceUUID;
+                readCharacteristicUUID = [CBUUID UUIDWithString:@HM10_CHAR_TX_UUID];
+                writeCharacteristicUUID = [CBUUID UUIDWithString:@HM10_CHAR_RX_UUID];
+                break;
+            } else if ([service.UUID isEqual:hc02ServiceUUID]) {
+                NSLog(@"HC-02 Bluetooth");
+                NSLog(@"Set HC-02 read write UUID");
+                serialServiceUUID = hc02ServiceUUID;
+                readCharacteristicUUID = [CBUUID UUIDWithString:@HC02_CHAR_TX_UUID];
+                writeCharacteristicUUID = [CBUUID UUIDWithString:@HC02_CHAR_RX_UUID];
+                break;
+            } else {
+                // ignore unknown services
+            }
         }
-    }
 
-    NSLog(@"9Printer service was NOT found");
+        // TODO - future versions should just get characteristics we care about
+        // [peripheral discoverCharacteristics:characteristics forService:service];
+        [self getAllCharacteristicsFromPeripheral:peripheral];
+    }
+    else
+    {
+        NSLog(@"Service discovery was unsuccessful!");
+    }
 }
 
 - (void)peripheral:(CBPeripheral *)peripheral didUpdateNotificationStateForCharacteristic:(CBCharacteristic *)characteristic error:(NSError *)error

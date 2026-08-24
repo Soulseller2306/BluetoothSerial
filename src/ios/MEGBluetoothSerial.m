@@ -135,9 +135,9 @@
 
 - (void)list:(CDVInvokedUrlCommand*)command {
 
-    [self scanForBLEPeripherals:3];
+    [self scanForBLEPeripherals:5];
 
-    [NSTimer scheduledTimerWithTimeInterval:(float)3.0
+    [NSTimer scheduledTimerWithTimeInterval:(float)5.0
                                      target:self
                                    selector:@selector(listPeripheralsTimer:)
                                    userInfo:[command.callbackId copy]
@@ -147,7 +147,7 @@
 - (void)isEnabled:(CDVInvokedUrlCommand*)command {
 
     // short delay so CBCentralManger can spin up bluetooth
-    [NSTimer scheduledTimerWithTimeInterval:(float)0.2
+    [NSTimer scheduledTimerWithTimeInterval:(float)1.0
                                      target:self
                                    selector:@selector(bluetoothStateTimer:)
                                    userInfo:[command.callbackId copy]
@@ -420,9 +420,9 @@
 
 - (void)connectToFirstDevice {
 
-    [self scanForBLEPeripherals:3];
+    [self scanForBLEPeripherals:5];
 
-    [NSTimer scheduledTimerWithTimeInterval:(float)3.0
+    [NSTimer scheduledTimerWithTimeInterval:(float)5.0
                                      target:self
                                    selector:@selector(connectFirstDeviceTimer:)
                                    userInfo:nil
