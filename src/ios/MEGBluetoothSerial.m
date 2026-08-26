@@ -391,22 +391,43 @@
     NSMutableArray *peripherals = [NSMutableArray array];
 
     for (int i = 0; i < _bleShield.peripherals.count; i++) {
-        NSMutableDictionary *peripheral = [NSMutableDictionary dictionary];
-        CBPeripheral *p = [_bleShield.peripherals objectAtIndex:i];
 
-        NSString *uuid = p.identifier.UUIDString;
-        [peripheral setObject: uuid forKey: @"uuid"];
-        [peripheral setObject: uuid forKey: @"id"];
+        NSMutableDictionary *peripheral =
+            [NSMutableDictionary dictionary];
 
-        NSString *name = [p name];
-        if (!name) {
-            name = [peripheral objectForKey:@"uuid"];
+        CBPeripheral *p =
+            [_bleShield.peripherals objectAtIndex:i];
+
+        // iOS CoreBluetooth UUID
+        NSString *uuid =
+            p.identifier.UUIDString;
+
+        if (uuid) {
+            [peripheral setObject:uuid forKey:@"uuid"];
+            [peripheral setObject:uuid forKey:@"id"];
         }
-        [peripheral setObject: name forKey: @"name"];
 
-        NSNumber *rssi = [p btsAdvertisementRSSI];
-        if (rssi) { // BLEShield doesn't provide advertised RSSI
-            [peripheral setObject: rssi forKey:@"rssi"];
+        // 1. Try peripheral.name
+        NSString *name = p.name;
+
+        // 2. Try BLE advertised local name
+        if (!name || [name length] == 0) {
+            name = [p btsAdvertisementName];
+        }
+
+        // 3. Last fallback: UUID
+        if (!name || [name length] == 0) {
+            name = uuid;
+        }
+
+        [peripheral setObject:name forKey:@"name"];
+
+        // RSSI
+        NSNumber *rssi =
+            [p btsAdvertisementRSSI];
+
+        if (rssi) {
+            [peripheral setObject:rssi forKey:@"rssi"];
         }
 
         [peripherals addObject:peripheral];

@@ -19,43 +19,115 @@
 #import "CBPeripheral+BTSExtensions.h"
 
 static char BTS_ADVERTISING_IDENTIFER;
+static char BTS_ADVERTISEMENT_NAME_IDENTIFER;
 static char BTS_ADVERTISEMENT_RSSI_IDENTIFER;
 
 @implementation CBPeripheral(com_megster_bluetoothserial_extension)
 
 // AdvertisementData and RSSI are from didDiscoverPeripheral.
-// Save the manufacturerData so we can pass to Cordova in the peripheral
--(void)bts_setAdvertisementData:(NSDictionary *)advertisementData RSSI:(NSNumber *)rssi{
+// Save the advertisement information so we can pass it to Cordova.
+-(void)bts_setAdvertisementData:(NSDictionary *)advertisementData
+                            RSSI:(NSNumber *)rssi {
 
     if (advertisementData) {
-        id manufacturerData = [advertisementData objectForKey:CBAdvertisementDataManufacturerDataKey];
-        if (manufacturerData) {
-            const uint8_t *bytes = [manufacturerData bytes];
-            long len = [manufacturerData length];
-            // skip manufacturer uuid
-            NSData *data = [NSData dataWithBytes:bytes+2 length:len-2];
-            [self setBtsAdvertising: [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]];
+
+        // BLE advertised local name
+        NSString *localName =
+            [advertisementData objectForKey:CBAdvertisementDataLocalNameKey];
+
+        if (localName) {
+            [self setBtsAdvertisementName:localName];
+        }
+
+        // Manufacturer data
+        NSData *manufacturerData =
+            [advertisementData objectForKey:
+                CBAdvertisementDataManufacturerDataKey];
+
+        if (manufacturerData && manufacturerData.length > 2) {
+
+            const uint8_t *bytes = manufacturerData.bytes;
+            NSUInteger len = manufacturerData.length;
+
+            // Skip manufacturer UUID
+            NSData *data =
+                [NSData dataWithBytes:bytes + 2
+                               length:len - 2];
+
+            NSString *advertising =
+                [[NSString alloc] initWithData:data
+                                      encoding:NSUTF8StringEncoding];
+
+            if (advertising) {
+                [self setBtsAdvertising:advertising];
+            }
         }
     }
 
-    [self setBtsAdvertisementRSSI: rssi];
+    [self setBtsAdvertisementRSSI:rssi];
 }
 
--(void)setBtsAdvertising:(NSString *)newAdvertisingValue{
-    objc_setAssociatedObject(self, &BTS_ADVERTISING_IDENTIFER, newAdvertisingValue, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+
+#pragma mark - Advertisement data
+
+-(void)setBtsAdvertising:(NSString *)newAdvertisingValue {
+
+    objc_setAssociatedObject(
+        self,
+        &BTS_ADVERTISING_IDENTIFER,
+        newAdvertisingValue,
+        OBJC_ASSOCIATION_RETAIN_NONATOMIC
+    );
 }
 
--(NSString*)btsAdvertising{
-    return objc_getAssociatedObject(self, &BTS_ADVERTISING_IDENTIFER);
+-(NSString *)btsAdvertising {
+
+    return objc_getAssociatedObject(
+        self,
+        &BTS_ADVERTISING_IDENTIFER
+    );
 }
 
+
+#pragma mark - Advertisement name
+
+-(void)setBtsAdvertisementName:(NSString *)newAdvertisementName {
+
+    objc_setAssociatedObject(
+        self,
+        &BTS_ADVERTISEMENT_NAME_IDENTIFER,
+        newAdvertisementName,
+        OBJC_ASSOCIATION_RETAIN_NONATOMIC
+    );
+}
+
+-(NSString *)btsAdvertisementName {
+
+    return objc_getAssociatedObject(
+        self,
+        &BTS_ADVERTISEMENT_NAME_IDENTIFER
+    );
+}
+
+
+#pragma mark - RSSI
 
 -(void)setBtsAdvertisementRSSI:(NSNumber *)newAdvertisementRSSIValue {
-    objc_setAssociatedObject(self, &BTS_ADVERTISEMENT_RSSI_IDENTIFER, newAdvertisementRSSIValue, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+
+    objc_setAssociatedObject(
+        self,
+        &BTS_ADVERTISEMENT_RSSI_IDENTIFER,
+        newAdvertisementRSSIValue,
+        OBJC_ASSOCIATION_RETAIN_NONATOMIC
+    );
 }
 
--(NSString*)btsAdvertisementRSSI{
-    return objc_getAssociatedObject(self, &BTS_ADVERTISEMENT_RSSI_IDENTIFER);
+-(NSNumber *)btsAdvertisementRSSI {
+
+    return objc_getAssociatedObject(
+        self,
+        &BTS_ADVERTISEMENT_RSSI_IDENTIFER
+    );
 }
 
 @end

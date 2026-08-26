@@ -23,8 +23,10 @@
 @interface CBPeripheral(com_megster_bluetoothserial_extension)
 
 @property (nonatomic, retain) NSString *btsAdvertising;
+@property (nonatomic, retain) NSString *btsAdvertisementName;
 @property (nonatomic, retain) NSNumber *btsAdvertisementRSSI;
 
--(void)bts_setAdvertisementData:(NSDictionary *)advertisementData RSSI:(NSNumber*)rssi;
+-(void)bts_setAdvertisementData:(NSDictionary *)advertisementData
+                            RSSI:(NSNumber*)rssi;
 
 @end
