@@ -116,21 +116,78 @@
 }
 
 
-- (void)write:(CDVInvokedUrlCommand*)command {
-    NSLog(@"write");
+- (void)write:(CDVInvokedUrlCommand*)command
+{
+    NSLog(@"========== CORDOVA WRITE ==========");
 
     CDVPluginResult *pluginResult = nil;
-    NSData *data  = [command.arguments objectAtIndex:0];
 
-    if (data != nil) {
+    if (command.arguments.count == 0) {
 
-        [_bleShield write:data];
+        pluginResult =
+            [CDVPluginResult
+                resultWithStatus:CDVCommandStatus_ERROR
+                messageAsString:@"No data argument"];
 
-        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    } else {
-        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"data was null"];
+        [self.commandDelegate
+            sendPluginResult:pluginResult
+                  callbackId:command.callbackId];
+
+        return;
     }
-    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+
+
+    NSData *data =
+        [command.arguments objectAtIndex:0];
+
+
+    if (!data || data == [NSNull null]) {
+
+        pluginResult =
+            [CDVPluginResult
+                resultWithStatus:CDVCommandStatus_ERROR
+                messageAsString:@"Data was null"];
+
+        [self.commandDelegate
+            sendPluginResult:pluginResult
+                  callbackId:command.callbackId];
+
+        return;
+    }
+
+
+    NSString *errorMessage = nil;
+
+    BOOL success =
+        [_bleShield write:data
+                    error:&errorMessage];
+
+
+    if (success) {
+
+        pluginResult =
+            [CDVPluginResult
+                resultWithStatus:CDVCommandStatus_OK];
+
+    }
+    else {
+
+        if (!errorMessage) {
+            errorMessage = @"Unknown BLE write error";
+        }
+
+        pluginResult =
+            [CDVPluginResult
+                resultWithStatus:CDVCommandStatus_ERROR
+                messageAsString:errorMessage];
+    }
+
+
+    [self.commandDelegate
+        sendPluginResult:pluginResult
+              callbackId:command.callbackId];
+
+    NSLog(@"=================================");
 }
 
 - (void)list:(CDVInvokedUrlCommand*)command {
