@@ -1220,14 +1220,12 @@ didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
     }
 
 
-    if (![characteristic.UUID.UUIDString
-          caseInsensitiveCompare:
-          readCharacteristicUUID.UUIDString]
-        == NSOrderedSame)
+    if ([characteristic.UUID.UUIDString
+     caseInsensitiveCompare:readCharacteristicUUID.UUIDString]
+    != NSOrderedSame)
     {
         return;
     }
-
 
     if (!characteristic.value) {
         return;
