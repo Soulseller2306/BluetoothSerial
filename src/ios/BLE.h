@@ -43,7 +43,7 @@
 -(void) writeValue:(CBUUID *)serviceUUID characteristicUUID:(CBUUID *)characteristicUUID p:(CBPeripheral *)p data:(NSData *)data;
 
 -(BOOL) isConnected;
--(void) write:(NSData *)d;
+-(BOOL)write:(NSData *)d error:(NSString **)error;
 -(void) readRSSI;
 
 -(void) controlSetup;
