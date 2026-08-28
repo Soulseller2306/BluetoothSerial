@@ -188,7 +188,7 @@ CBCharacteristic *activeWriteCharacteristic;
             return NO;
         }
     }
-
+}
 
 /*
  * ============================================================
@@ -264,8 +264,6 @@ CBCharacteristic *activeWriteCharacteristic;
     isWriting = NO;
 
     NSLog(@"BLE write queue completed");
-}
-
 
     /*
      * Determine the maximum packet size.
