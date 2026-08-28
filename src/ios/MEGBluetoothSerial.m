@@ -120,37 +120,65 @@
 {
     NSLog(@"========== CORDOVA WRITE ==========");
 
-    CDVPluginResult *pluginResult = nil;
-
     if (command.arguments.count == 0) {
 
-        pluginResult =
-            [CDVPluginResult
-                resultWithStatus:CDVCommandStatus_ERROR
+        CDVPluginResult *result =
+            [CDVPluginResult resultWithStatus:
+                CDVCommandStatus_ERROR
                 messageAsString:@"No data argument"];
 
         [self.commandDelegate
-            sendPluginResult:pluginResult
-                  callbackId:command.callbackId];
+            sendPluginResult:result
+            callbackId:command.callbackId];
 
         return;
     }
 
 
-    NSData *data =
+    id argument =
         [command.arguments objectAtIndex:0];
 
 
-    if (!data || data == [NSNull null]) {
+    if (!argument || argument == [NSNull null]) {
 
-        pluginResult =
-            [CDVPluginResult
-                resultWithStatus:CDVCommandStatus_ERROR
+        CDVPluginResult *result =
+            [CDVPluginResult resultWithStatus:
+                CDVCommandStatus_ERROR
                 messageAsString:@"Data was null"];
 
         [self.commandDelegate
-            sendPluginResult:pluginResult
-                  callbackId:command.callbackId];
+            sendPluginResult:result
+            callbackId:command.callbackId];
+
+        return;
+    }
+
+
+    NSData *data = nil;
+
+    if ([argument isKindOfClass:[NSData class]]) {
+
+        data = (NSData *)argument;
+
+    }
+    else if ([argument isKindOfClass:[NSString class]]) {
+
+        data =
+            [(NSString *)argument
+                dataUsingEncoding:NSUTF8StringEncoding];
+    }
+
+
+    if (!data) {
+
+        CDVPluginResult *result =
+            [CDVPluginResult resultWithStatus:
+                CDVCommandStatus_ERROR
+                messageAsString:@"Unsupported data type"];
+
+        [self.commandDelegate
+            sendPluginResult:result
+            callbackId:command.callbackId];
 
         return;
     }
@@ -161,6 +189,9 @@
     BOOL success =
         [_bleShield write:data
                     error:&errorMessage];
+
+
+    CDVPluginResult *pluginResult = nil;
 
 
     if (success) {
@@ -185,7 +216,7 @@
 
     [self.commandDelegate
         sendPluginResult:pluginResult
-              callbackId:command.callbackId];
+        callbackId:command.callbackId];
 
     NSLog(@"=================================");
 }

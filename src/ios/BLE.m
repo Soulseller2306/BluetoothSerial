@@ -104,93 +104,60 @@ CBUUID *writeCharacteristicUUID;
 }
 
 
-- (BOOL)write:(NSData *)d error:(NSString **)error
+- (BOOL)write:(NSData *)data error:(NSString **)error
 {
-    NSLog(@"========== BLE WRITE REQUEST ==========");
+    NSLog(@"========== BLE WRITE ==========");
 
-    if (!d) {
-        NSString *message = @"Data was nil";
-
-        NSLog(@"WRITE ERROR: %@", message);
-
+    if (!data) {
         if (error) {
-            *error = message;
+            *error = @"Data is nil";
         }
-
         return NO;
     }
 
     if (!activePeripheral) {
-        NSString *message = @"No active BLE peripheral";
-
-        NSLog(@"WRITE ERROR: %@", message);
-
         if (error) {
-            *error = message;
+            *error = @"No active peripheral";
         }
-
         return NO;
     }
 
     if (activePeripheral.state != CBPeripheralStateConnected) {
-        NSString *message =
-            [NSString stringWithFormat:
-                @"Peripheral is not connected. State=%ld",
-                (long)activePeripheral.state];
-
-        NSLog(@"WRITE ERROR: %@", message);
-
         if (error) {
-            *error = message;
+            *error = [NSString stringWithFormat:
+                      @"Peripheral not connected. State=%ld",
+                      (long)activePeripheral.state];
         }
-
         return NO;
     }
 
     if (!serialServiceUUID) {
-        NSString *message =
-            @"serialServiceUUID is nil";
-
-        NSLog(@"WRITE ERROR: %@", message);
-
         if (error) {
-            *error = message;
+            *error = @"serialServiceUUID is nil";
         }
-
         return NO;
     }
 
     if (!writeCharacteristicUUID) {
-        NSString *message =
-            @"writeCharacteristicUUID is nil";
-
-        NSLog(@"WRITE ERROR: %@", message);
-
         if (error) {
-            *error = message;
+            *error = @"writeCharacteristicUUID is nil";
         }
-
         return NO;
     }
 
-    NSLog(@"Peripheral: %@", activePeripheral.name);
-
-    NSLog(@"Peripheral UUID: %@",
+    NSLog(@"Peripheral = %@", activePeripheral.name);
+    NSLog(@"Peripheral UUID = %@",
           activePeripheral.identifier.UUIDString);
 
-    NSLog(@"Service UUID: %@",
+    NSLog(@"Service UUID = %@",
           serialServiceUUID.UUIDString);
 
-    NSLog(@"Write Characteristic UUID: %@",
+    NSLog(@"Write UUID = %@",
           writeCharacteristicUUID.UUIDString);
 
-    NSLog(@"Data length: %lu",
-          (unsigned long)d.length);
+    NSLog(@"Data length = %lu",
+          (unsigned long)data.length);
 
-
-    /*
-     * Find the service.
-     */
 
     CBService *service =
         [self findServiceFromUUID:serialServiceUUID
@@ -198,184 +165,131 @@ CBUUID *writeCharacteristicUUID;
 
     if (!service) {
 
-        NSString *message =
-            [NSString stringWithFormat:
-                @"Service not found: %@",
-                serialServiceUUID.UUIDString];
-
-        NSLog(@"WRITE ERROR: %@", message);
-
         if (error) {
-            *error = message;
+            *error = [NSString stringWithFormat:
+                      @"Service not found: %@",
+                      serialServiceUUID.UUIDString];
         }
 
         return NO;
     }
 
 
-    /*
-     * Find the write characteristic.
-     */
-
     CBCharacteristic *characteristic =
-        [self findCharacteristicFromUUID:
-              writeCharacteristicUUID
+        [self findCharacteristicFromUUID:writeCharacteristicUUID
                                  service:service];
 
     if (!characteristic) {
 
-        NSString *message =
-            [NSString stringWithFormat:
-                @"Write characteristic not found: %@",
-                writeCharacteristicUUID.UUIDString];
-
-        NSLog(@"WRITE ERROR: %@", message);
-
         if (error) {
-            *error = message;
+            *error = [NSString stringWithFormat:
+                      @"Characteristic not found: %@",
+                      writeCharacteristicUUID.UUIDString];
         }
 
         return NO;
     }
 
 
+    NSLog(@"Characteristic found = %@",
+          characteristic.UUID.UUIDString);
+
+    NSLog(@"Properties = %lu",
+          (unsigned long)characteristic.properties);
+
+
     /*
-     * Make sure the printer supports
-     * Write Without Response.
+     * IMPORTANT:
+     *
+     * Current printer supports:
+     * Write
+     * Write Without Response
+     *
+     * Prefer Write Without Response.
      */
 
-    if (!(characteristic.properties &
-          CBCharacteristicPropertyWriteWithoutResponse)) {
+    if (characteristic.properties &
+        CBCharacteristicPropertyWriteWithoutResponse)
+    {
 
-        NSString *message =
-            [NSString stringWithFormat:
-                @"Characteristic %@ does not support Write Without Response",
-                characteristic.UUID.UUIDString];
+        NSUInteger maximumLength =
+            [activePeripheral
+                maximumWriteValueLengthForType:
+                    CBCharacteristicWriteWithoutResponse];
 
-        NSLog(@"WRITE ERROR: %@", message);
+        NSLog(@"Maximum write length = %lu",
+              (unsigned long)maximumLength);
 
-        if (error) {
-            *error = message;
+        if (maximumLength == 0) {
+
+            if (error) {
+                *error =
+                    @"Maximum Write Without Response length is 0";
+            }
+
+            return NO;
         }
 
-        return NO;
-    }
 
+        /*
+         * For the first test, use a SMALL payload.
+         */
 
-    /*
-     * Check CoreBluetooth flow control.
-     */
+        if (data.length > maximumLength) {
 
-    if (![activePeripheral canSendWriteWithoutResponse]) {
+            if (error) {
+                *error = [NSString stringWithFormat:
+                    @"Data length %lu exceeds maximum BLE write length %lu",
+                    (unsigned long)data.length,
+                    (unsigned long)maximumLength];
+            }
 
-        NSString *message =
-            @"Peripheral is currently not ready to receive Write Without Response";
-
-        NSLog(@"WRITE ERROR: %@", message);
-
-        if (error) {
-            *error = message;
+            return NO;
         }
 
-        return NO;
-    }
 
-
-    /*
-     * Determine maximum BLE write size.
-     */
-
-    NSUInteger maximumLength =
-        [activePeripheral
-            maximumWriteValueLengthForType:
-                CBCharacteristicWriteWithoutResponse];
-
-    if (maximumLength == 0) {
-
-        NSString *message =
-            @"Bluetooth returned maximum write length = 0";
-
-        NSLog(@"WRITE ERROR: %@", message);
-
-        if (error) {
-            *error = message;
-        }
-
-        return NO;
-    }
-
-
-    NSLog(@"Maximum write length: %lu",
-          (unsigned long)maximumLength);
-
-
-    /*
-     * Single write.
-     */
-
-    if (d.length <= maximumLength) {
+        /*
+         * Write directly.
+         */
 
         [activePeripheral
-            writeValue:d
+            writeValue:data
       forCharacteristic:characteristic
                    type:CBCharacteristicWriteWithoutResponse];
 
-        NSLog(@"WRITE SUCCESS: %lu bytes",
-              (unsigned long)d.length);
+
+        NSLog(@"WRITE WITHOUT RESPONSE submitted");
 
         return YES;
     }
 
 
     /*
-     * Multiple BLE writes.
+     * Fallback to Write With Response.
      */
 
-    NSUInteger offset = 0;
-
-    while (offset < d.length) {
-
-        if (![activePeripheral canSendWriteWithoutResponse]) {
-
-            NSString *message =
-                [NSString stringWithFormat:
-                    @"Peripheral stopped accepting data at byte %lu",
-                    (unsigned long)offset];
-
-            NSLog(@"WRITE ERROR: %@", message);
-
-            if (error) {
-                *error = message;
-            }
-
-            return NO;
-        }
-
-        NSUInteger remaining =
-            d.length - offset;
-
-        NSUInteger chunkLength =
-            MIN(remaining, maximumLength);
-
-        NSData *chunk =
-            [d subdataWithRange:
-                NSMakeRange(offset, chunkLength)];
+    if (characteristic.properties &
+        CBCharacteristicPropertyWrite)
+    {
 
         [activePeripheral
-            writeValue:chunk
+            writeValue:data
       forCharacteristic:characteristic
-                   type:CBCharacteristicWriteWithoutResponse];
+                   type:CBCharacteristicWriteWithResponse];
 
-        offset += chunkLength;
+        NSLog(@"WRITE WITH RESPONSE submitted");
+
+        return YES;
     }
 
 
-    NSLog(@"WRITE SUCCESS: %lu bytes sent in chunks",
-          (unsigned long)d.length);
+    if (error) {
+        *error = [NSString stringWithFormat:
+                  @"Characteristic %@ is not writable",
+                  characteristic.UUID.UUIDString];
+    }
 
-    NSLog(@"========================================");
-
-    return YES;
+    return NO;
 }
 
 
@@ -1273,122 +1187,77 @@ didDiscoverServices:(NSError *)error
 
 - (void)peripheral:(CBPeripheral *)peripheral
 didDiscoverCharacteristicsForService:(CBService *)service
-             error:(NSError *)error
+error:(NSError *)error
 {
     if (error) {
 
-        NSLog(@"========== CHARACTERISTIC ERROR ==========");
-
-        NSLog(@"Service: %@",
-              service.UUID.UUIDString);
-
-        NSLog(@"Error: %@", error);
-
-        NSLog(@"==========================================");
-
+        NSLog(@"Characteristic discovery failed: %@", error);
         return;
     }
 
-
-    NSLog(@"========== CHARACTERISTICS ==========");
-
-    NSLog(@"Service UUID: %@",
+    NSLog(@"Service: %@",
           service.UUID.UUIDString);
-
-
-    BOOL printerWriteCharacteristicFound = NO;
 
 
     for (CBCharacteristic *characteristic
          in service.characteristics)
     {
-        NSLog(@"Characteristic UUID: %@",
+
+        NSLog(@"Characteristic: %@",
               characteristic.UUID.UUIDString);
 
         NSLog(@"Properties: %lu",
               (unsigned long)characteristic.properties);
 
 
-        if (characteristic.properties &
-            CBCharacteristicPropertyWriteWithoutResponse)
-        {
-            NSLog(@"  -> WRITE WITHOUT RESPONSE");
-        }
-
-
-        if (characteristic.properties &
-            CBCharacteristicPropertyWrite)
-        {
-            NSLog(@"  -> WRITE WITH RESPONSE");
-        }
-
-
-        if (characteristic.properties &
-            CBCharacteristicPropertyRead)
-        {
-            NSLog(@"  -> READ");
-        }
-
-
-        if (characteristic.properties &
-            CBCharacteristicPropertyNotify)
-        {
-            NSLog(@"  -> NOTIFY");
-        }
-
-
         /*
-         * Check specifically for the printer's write
-         * characteristic.
+         * 9Printer write characteristic
          */
-
-        if (writeCharacteristicUUID &&
-            [characteristic.UUID.UUIDString
+        if ([characteristic.UUID.UUIDString
              caseInsensitiveCompare:
-             writeCharacteristicUUID.UUIDString]
-                == NSOrderedSame)
+             @HC02_CHAR_RX_UUID] == NSOrderedSame)
         {
-            printerWriteCharacteristicFound = YES;
 
-            NSLog(@"*** PRINTER WRITE CHARACTERISTIC FOUND ***");
+            NSLog(@"*** 9PRINTER WRITE CHARACTERISTIC FOUND ***");
 
-            NSLog(@"UUID: %@",
-                  characteristic.UUID.UUIDString);
+            serialServiceUUID =
+                service.UUID;
 
-            NSLog(@"Properties: %lu",
-                  (unsigned long)characteristic.properties);
+            writeCharacteristicUUID =
+                characteristic.UUID;
+
+            /*
+             * Optional read/notify characteristic.
+             */
+            readCharacteristicUUID =
+                [CBUUID UUIDWithString:@HC02_CHAR_TX_UUID];
+
+
+            NSLog(@"Service = %@",
+                  serialServiceUUID.UUIDString);
+
+            NSLog(@"WRITE = %@",
+                  writeCharacteristicUUID.UUIDString);
+
+
+            if ((characteristic.properties &
+                 CBCharacteristicPropertyWriteWithoutResponse) != 0)
+            {
+                NSLog(@"WRITE WITHOUT RESPONSE supported");
+            }
+
+
+            if (!done) {
+
+                done = true;
+                isConnected = true;
+
+                [[self delegate] bleDidConnect];
+            }
+
+            return;
         }
     }
-
-
-    /*
-     * Once the actual printer write characteristic
-     * has been discovered, the printer is ready.
-     */
-
-    if (printerWriteCharacteristicFound && !done) {
-
-        NSLog(@"*** PRINTER BLE READY FOR ESC/POS ***");
-
-        /*
-         * Enable notification only if the configured
-         * read characteristic exists.
-         */
-
-        if (readCharacteristicUUID) {
-
-            [self enableReadNotification:peripheral];
-        }
-
-
-        done = true;
-        isConnected = true;
-
-        [[self delegate] bleDidConnect];
-    }
-
-
-    NSLog(@"======================================");
 }
 
 
