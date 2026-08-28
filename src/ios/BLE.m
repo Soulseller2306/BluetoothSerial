@@ -188,6 +188,60 @@ CBCharacteristic *activeWriteCharacteristic;
             return NO;
         }
     }
+
+
+    /*
+     * Determine the maximum packet size.
+     */
+    NSUInteger maximumLength =
+        [activePeripheral
+            maximumWriteValueLengthForType:
+                CBCharacteristicWriteWithoutResponse];
+
+    if (maximumLength == 0)
+    {
+        if (error) {
+            *error = @"BLE maximum write length is zero";
+        }
+
+        return NO;
+    }
+
+
+    /*
+     * Split the receipt into BLE-sized chunks.
+     */
+    NSUInteger offset = 0;
+
+    while (offset < data.length)
+    {
+        NSUInteger remaining = data.length - offset;
+
+        NSUInteger chunkLength =
+            MIN(remaining, maximumLength);
+
+        NSData *chunk =
+            [data subdataWithRange:
+                NSMakeRange(offset, chunkLength)];
+
+        [writeQueue addObject:chunk];
+
+        offset += chunkLength;
+    }
+
+
+    NSLog(@"Queued %lu bytes in %lu chunks",
+          (unsigned long)data.length,
+          (unsigned long)writeQueue.count);
+
+
+    /*
+     * Start sending.
+     */
+    [self processWriteQueue];
+
+
+    return YES;
 }
 
 /*
@@ -264,59 +318,6 @@ CBCharacteristic *activeWriteCharacteristic;
     isWriting = NO;
 
     NSLog(@"BLE write queue completed");
-
-    /*
-     * Determine the maximum packet size.
-     */
-    NSUInteger maximumLength =
-        [activePeripheral
-            maximumWriteValueLengthForType:
-                CBCharacteristicWriteWithoutResponse];
-
-    if (maximumLength == 0)
-    {
-        if (error) {
-            *error = @"BLE maximum write length is zero";
-        }
-
-        return NO;
-    }
-
-
-    /*
-     * Split the receipt into BLE-sized chunks.
-     */
-    NSUInteger offset = 0;
-
-    while (offset < data.length)
-    {
-        NSUInteger remaining = data.length - offset;
-
-        NSUInteger chunkLength =
-            MIN(remaining, maximumLength);
-
-        NSData *chunk =
-            [data subdataWithRange:
-                NSMakeRange(offset, chunkLength)];
-
-        [writeQueue addObject:chunk];
-
-        offset += chunkLength;
-    }
-
-
-    NSLog(@"Queued %lu bytes in %lu chunks",
-          (unsigned long)data.length,
-          (unsigned long)writeQueue.count);
-
-
-    /*
-     * Start sending.
-     */
-    [self processWriteQueue];
-
-
-    return YES;
 }
 
 
