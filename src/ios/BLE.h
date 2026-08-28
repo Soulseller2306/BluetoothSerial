@@ -44,6 +44,7 @@
 
 -(BOOL) isConnected;
 -(BOOL)write:(NSData *)d error:(NSString **)error;
+-(void)processWriteQueue;
 -(void) readRSSI;
 
 -(void) controlSetup;
